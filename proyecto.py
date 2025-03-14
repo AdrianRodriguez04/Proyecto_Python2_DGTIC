@@ -200,20 +200,89 @@ class Restaurante:
         else:
             print("Cliente no registrado")
 
-restaurante = Restaurante()
-restaurante.añadirMesa(1,4)
-restaurante.añadirMesa(2,2)
-restaurante.menu.agregarItem('Tacos','Tacos de pastor con todo',10.0)
-restaurante.menu.agregarItem('Torta','Torta de pastor con todo',50.0)
-restaurante.mostrarMesasDisponibles()
+class MenuCliente:
+    def __init__(self, restaurante, cliente):
+        self.restaurante = restaurante
+        self.cliente = cliente
 
-cliente = Cliente('Adrián Rodríguez')
-cliente2 = Cliente("Pablo Molina")
+    def mostrarMenu(self):
+        while True:
+            print("\nMenú Comensal")
+            print("1. Ver Menú")
+            print("2. Escoger Items del Menú")
+            print("3. Ver Cuenta")
+            print("4. Salir")
+            opcion = input("Seleccione una opción: ")
 
-restaurante.hacerReservacion(cliente,1)
-restaurante.mostrarMesasDisponibles()
+            if opcion == "1":
+                self.restaurante.mostrarMenu()
+            elif opcion == "2":
+                self.restaurante.escogerItemsMenu(self.cliente)
+            elif opcion == "3":
+                self.restaurante.mostrarCuenta(self.cliente)
+            elif opcion == "4":
+                print("Gracias por su visita. Vuelva pronto! :D")
+                break
+            else:
+                print("Opción inválida :( Intente de nuevo.")
 
-restaurante.hacerReservacion(cliente2,2)
+class MenuAdministrador:
+    def __init__(self,restaurante):
+        self.restaurante = restaurante
+    def mostrarMenu(self):
+        while True:
+            print("\nMenú Administrador")
+            print("1. Añadir Mesa")
+            print("2. Eliminar Mesa")
+            print("3. Mostrar Mesas Disponibles")
+            print("4. Añadir Item al Menú")
+            print("5. Eliminar Item del Menu")
+            print("6. Ver Clientes")
+            print("7. Salir")
+            opcion = input("Seleccione una opción: ")
 
-restaurante.escogerItemsMenu(cliente)
-restaurante.mostrarCuenta(cliente)
+            if opcion == "1":
+                numero = int(input("Número de la mesa: "))
+                capacidad = int(input("Capacidad de la mesa: "))
+                self.restaurante.añadirMesa(numero,capacidad)
+            elif opcion == "2":
+                numero = int(input("Número de la mesa a eliminar: "))
+                self.restaurante.eliminarMesa(numero)
+            elif opcion == "3":
+                self.restaurante.mostarMesasDisponibles()
+            elif opcion == "4":
+                nombre = input("Nombre del item: ")
+                descripcion = input("Descripción: ")
+                precio = float(input("Precio: "))
+                self.restaurante.menu.agregarItem(nombre, descripcion, precio)
+            elif opcion == "5":
+                nombre = input("Nombre del item a eliminar: ")
+                self.restaurante.menu.eliminarITem(nombre)
+            elif opcion == "6":
+                consulta = "SELECT * FROM clientes"
+                cursor.execute(consulta)
+                for cliente in cursor.fetchall():
+                    print(cliente)
+            elif opcion == "7":
+                print("Saliendo del menú de administrador.")
+                break
+            else:
+                print("Opción inválida. Intentalo de nuevo.")
+
+#restaurante = Restaurante()
+#restaurante.añadirMesa(1,4)
+#restaurante.añadirMesa(2,2)
+#restaurante.menu.agregarItem('Tacos','Tacos de pastor con todo',10.0)
+#restaurante.menu.agregarItem('Torta','Torta de pastor con todo',50.0)
+#restaurante.mostrarMesasDisponibles()
+
+#cliente = Cliente('Adrián Rodríguez')
+#cliente2 = Cliente("Pablo Molina")
+
+#restaurante.hacerReservacion(cliente,1)
+#restaurante.mostrarMesasDisponibles()
+
+#restaurante.hacerReservacion(cliente2,2)
+
+#restaurante.escogerItemsMenu(cliente)
+#restaurante.mostrarCuenta(cliente)
