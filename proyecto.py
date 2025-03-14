@@ -249,7 +249,7 @@ class MenuAdministrador:
                 numero = int(input("Número de la mesa a eliminar: "))
                 self.restaurante.eliminarMesa(numero)
             elif opcion == "3":
-                self.restaurante.mostarMesasDisponibles()
+                self.restaurante.mostrarMesasDisponibles()
             elif opcion == "4":
                 nombre = input("Nombre del item: ")
                 descripcion = input("Descripción: ")
@@ -257,7 +257,7 @@ class MenuAdministrador:
                 self.restaurante.menu.agregarItem(nombre, descripcion, precio)
             elif opcion == "5":
                 nombre = input("Nombre del item a eliminar: ")
-                self.restaurante.menu.eliminarITem(nombre)
+                self.restaurante.menu.eliminarItem(nombre)
             elif opcion == "6":
                 consulta = "SELECT * FROM clientes"
                 cursor.execute(consulta)
@@ -268,6 +268,51 @@ class MenuAdministrador:
                 break
             else:
                 print("Opción inválida. Intentalo de nuevo.")
+
+class Main:
+    def __init__(self):
+        self.restaurante = Restaurante()
+    
+    def mostrarMenuPrincipal(self):
+        while True:
+            print("\nMenú Principal")
+            print("1. Menú Cliente")
+            print("2. Menú Administrador")
+            print("3. Salir")
+            opcion = input("Selecciona una opción: ")
+
+            if opcion == "1":
+                nombreCliente = input("Ingrese su nombre: ")
+                cliente = Cliente(nombreCliente)
+                menuC = MenuCliente(self.restaurante, cliente)
+
+                if not cliente.mesaAsignada:
+                    print("\nMesas disponibles: ")
+                    self.restaurante.mostrarMesasDisponibles()
+                    while True:
+                        try:
+                            numeroMesa = int(input("Ingrese el número de la mesa que desea reservar: "))
+                            mesaReservada = self.restaurante.hacerReservacion(cliente, numeroMesa)
+                            if mesaReservada:
+                                print(f"Mesa {numeroMesa} asignada exitosamente.")
+                                break
+                            else:
+                                print("Esa mesa no esta disponible.")
+                        except ValueError:
+                            print("Por favor ingresa un número que sí sea válido")
+                menuC.mostrarMenu()
+            elif opcion == "2":
+                menuA = MenuAdministrador(self.restaurante)
+                menuA.mostrarMenu()
+            elif opcion == "3":
+                print("Gracias por usar el sistema de nuestro restaurantE. ¡Hasta pronto! :D")
+                break
+            else:
+                print("Opción invalida.")
+
+if __name__ == "__main__":
+    principal = Main()
+    principal.mostrarMenuPrincipal()
 
 #restaurante = Restaurante()
 #restaurante.añadirMesa(1,4)
