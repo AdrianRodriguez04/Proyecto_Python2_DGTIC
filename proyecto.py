@@ -1,22 +1,48 @@
+import mysql.connector
+
+conexion = mysql.connector.connect(
+    host='localhost',
+    user='empleado',
+    password='Cortana33',
+    database='restaurante'
+)
+
+cursor = conexion.cursor()
+
 class Mesa:
     def __init__(self, numero, capacidad):
         self.numero = numero
         self.capacidad = capacidad
         self.estado = 'libre'
 
+        consulta = "INSERT INTO mesas (numero, capacidad, estado) VALUES (%s, %s, %s)"
+        cursor.execute(consulta, (self.numero, self.capacidad, self.estado))
+        conexion.commit()
+
     def reservar(self):
         if self.estado == 'libre':
             self.estado = 'ocupada'
+            consulta = "UPDATE mesas SET estado = 'ocupada' WHERE numero = %s"
+            cursor.execute(consulta, (self.numero,))
+            conexion.commit()
             return True
         return False
     
     def liberar(self):
         if self.estado == 'ocupada':
             self.estado = 'libre'
+            consulta = "UPDATE mesas SET estado = 'libre' WHERE numero = %s"
+            cursor.execute(consulta, (self.numero,))
+            conexion.commit()
             return True
         return False
     
     def verificarEstado (self):
+        consulta = "SELECT estado FROM mesas WHERE numero = %s"
+        cursor.execute(consulta, (self.numero,))
+        estadoBD = cursor.fetchone()
+        if estadoBD:
+            self.estado = estadoBD[0]
         return self.estado
     
 class Pedido:
@@ -44,12 +70,25 @@ class Menu:
     def agregarItem(self, nombre, descripcion, precio):
         self.items.append(ItemMenu(nombre, descripcion, precio))
 
+        consulta = "INSERT INTO menu (nombre, descripcion, precio) VALUES (%s,%s,%s)"
+        cursor.execute(consulta,(nombre,descripcion,precio))
+        conexion.commit()
+
     def eliminarItem(self, nombre):
         self.items = [item for item in self.items if item.nombre != nombre]
 
+        consulta = "DELETE FROM menu WHERE nombre = %s"
+        cursor.execute(consulta, (nombre,))
+        conexion.commit()
+
     def mostrarMenu(self):
-        for item in self.items:
-            print(f"{item.nombre}: {item.descripcion} - ${item.precio}")
+        consulta = "SELECT nombre, descripcion, precio FROM menu"
+        cursor.execute(consulta)
+        for nombre, descripcion, precio in cursor.fetchall():
+            print(f"{nombre}: {descripcion} - ${precio}")
+
+        #for item in self.items:
+        #   print(f"{item.nombre}: {item.descripcion} - ${item.precio}")
 
 class ItemMenu:
     def __init__(self, nombre, descripcion, precio):
@@ -63,8 +102,15 @@ class Cliente:
         self.mesaAsignada = None
         self.pedidoActual = Pedido()
 
+        consulta = "INSERT INTO clientes (nombre) VALUES (%s)"
+        cursor.execute(consulta, (self.nombre,))
+        conexion.commit()
+
     def asignarMesa(self, mesa):
         self.mesaAsignada = mesa
+        consulta = "UPDATE clientes SET mesaAsignada = %s WHERE nombre = %s"
+        cursor.execute(consulta, (mesa.numero, self.nombre))
+        conexion.commit()
 
     def realizarPedido (self, items):
         for item in items:
@@ -87,18 +133,37 @@ class Restaurante:
     def eliminarMesa(self, numero):
         self.mesas = [mesa for mesa in self.mesas if mesa.numero != numero]
 
+        consulta = "DELETE FROM mesas WHERE numero = %s"
+        cursor.execute(consulta, (numero,))
+        conexion.commit()
+
     def mostrarMesasDisponibles(self):
-        for mesa in self.mesas:
-            if mesa.verificarEstado() == 'Libre':
-                print(f"Mesa {mesa.numero} (Capacidad: {mesa.capacidad}) esta disponible.")
+        consulta = "SELECT numero, capacidad FROM mesas WHERE estado = 'libre'"
+        cursor.execute(consulta)
+        for numero, capacidad in cursor.fetchall():
+            print(f"Mesa {numero} (Capacidad: {capacidad}) está disponible")
+        #for mesa in self.mesas:
+        #    if mesa.verificarEstado() == 'libre':
+        #        print(f"Mesa {mesa.numero} (Capacidad: {mesa.capacidad}) esta disponible.")
 
     def hacerReservacion (self, cliente, numeroMesa):
-        for mesa in self.mesas:
-            if mesa.numero == numeroMesa and mesa.reservar():
-                cliente.asignarMesa(mesa)
-                self.clientes.append(cliente)
-                print(f"Mesa {numeroMesa} reservada para {cliente.nombre}")
-                return True
+        consulta = "SELECT estado FROM mesas WHERE numero = %s"
+        cursor.execute(consulta, (numeroMesa,))
+        resultado = cursor.fetchone()
+
+        if resultado and resultado[0] == 'libre':
+            consulta = "UPDATE mesas SET estado = 'ocupada' WHERE numero = %s"
+            cursor.execute(consulta, (numeroMesa,))
+            cliente.asignarMesa(Mesa(numeroMesa, 0))
+            self.clientes.append(cliente)
+            print(f"Mesa {numeroMesa} reservada para {cliente.nombre}")
+            conexion.commit()
+        #for mesa in self.mesas:
+        #    if mesa.numero == numeroMesa and mesa.reservar():
+        #        cliente.asignarMesa(mesa)
+        #        self.clientes.append(cliente)
+        #        print(f"Mesa {numeroMesa} reservada para {cliente.nombre}")
+            return True
         print(f"Mesa {numeroMesa} no esta disponible.")
         return False
     
@@ -146,6 +211,7 @@ cliente = Cliente('Adrián Rodríguez')
 cliente2 = Cliente("Pablo Molina")
 
 restaurante.hacerReservacion(cliente,1)
+restaurante.mostrarMesasDisponibles()
 
 restaurante.hacerReservacion(cliente2,2)
 
