@@ -107,24 +107,33 @@ class Menu:
         self.cargarBD()
 
     def cargarBD(self):
-        consulta = "SELECT id, nombre, descripcion, precio FROM menu"
+        consulta = "SELECT id, nombre, descripcion, precio FROM menu WHERE activo = 1"
         cursor.execute(consulta)
         for id, nombre, descripcion, precio in cursor.fetchall():
             self.items.append(ItemMenu(id, nombre, descripcion, precio))
 
     def agregarItem(self, nombre, descripcion, precio):
-        consulta = "INSERT INTO menu (nombre, descripcion, precio) VALUES (%s,%s,%s)"
+        consulta = "INSERT INTO menu (nombre, descripcion, precio) VALUES (%s,%s,%s,1)"
         cursor.execute(consulta,(nombre,descripcion,precio))
         conexion.commit()
         self.items.append(ItemMenu(cursor.lastrowid, nombre, descripcion, precio))
         print(f"Item '{nombre}' añadido al menu")
 
     def eliminarItem(self, nombre):
-        consulta = "DELETE FROM menu WHERE nombre = %s"
+        consulta = "SELECT id FROM menu WHERE nombre = %s"
         cursor.execute(consulta, (nombre,))
-        conexion.commit()
-        self.items = [item for item in self.items if item.nombre != nombre]
-        print(f"Item '{nombre}' eliminado del menú")
+        resultado = cursor.fetchone()
+
+        if resultado:
+            itemId = resultado[0]
+            consulta = "UPDATE menu SET activo = 0 WHERE id = %s"
+            cursor.execute(consulta, (itemId,))
+            conexion.commit()
+
+            self.items = [item for item in self.items if item.nombre != nombre]
+            print(f"Item '{nombre}' desactivado correctamente.")
+        else:
+            print(f"Error: El item '{nombre}' no existe en el menú.")
 
     def mostrarMenu(self):
         if not self.items:
@@ -282,10 +291,9 @@ class Restaurante:
                         break
 
                     indice = int(opcion) - 1
-
                     if 0 <= indice < len(self.menu.items):
                         item = self.menu.items[indice]
-                        cantidad = int(input(f"Ingrese la cantidad de '{item.nombre}' que desea"))
+                        cantidad = int(input(f"Ingrese la cantidad de '{item.nombre}' que desea: "))
                         itemsSeleccionados.append((item.id, cantidad))
                         print (f"Item '{item.nombre}' añadido al pedido")
                     else:
@@ -351,8 +359,9 @@ class MenuAdministrador:
             print("3. Mostrar Mesas Disponibles")
             print("4. Añadir Item al Menú")
             print("5. Eliminar Item del Menu")
-            print("6. Ver Clientes")
-            print("7. Salir")
+            print("6. Mostrar Items del Menú")
+            print("7. Ver Clientes")
+            print("8. Salir")
             opcion = input("Seleccione una opción: ")
 
             if opcion == "1":
@@ -373,11 +382,13 @@ class MenuAdministrador:
                 nombre = input("Nombre del item a eliminar: ")
                 self.restaurante.menu.eliminarItem(nombre)
             elif opcion == "6":
+                self.restaurante.mostrarMenu()
+            elif opcion == "7":
                 consulta = "SELECT * FROM clientes"
                 cursor.execute(consulta)
                 for cliente in cursor.fetchall():
                     print(cliente)
-            elif opcion == "7":
+            elif opcion == "8":
                 print("Saliendo del menú de administrador.")
                 break
             else:
