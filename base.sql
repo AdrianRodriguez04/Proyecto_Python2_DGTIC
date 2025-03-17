@@ -35,15 +35,11 @@ CREATE TABLE pedidos (
 CREATE TABLE detallePedidos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     pedidoId INT,
-    itemId INT DEFAULT 1,
+    itemId INT,
+    cantidad INT DEFAULT 1,
     FOREIGN KEY (pedidoId) REFERENCES pedidos(id),
     FOREIGN KEY (itemId) REFERENCES menu(id)
 );
-
-
-
-
-
 
 SHOW tables;
 
