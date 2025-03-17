@@ -1,4 +1,5 @@
 import mysql.connector
+from getpass import getpass
 
 conexion = mysql.connector.connect(
     host='localhost',
@@ -184,10 +185,20 @@ class Cliente:
             self.pedidoActual.agregarItem(itemId,cantidad)
         self.pedidoActual.guardarPedido()
 
-    def verCuenta(self):
+    def verPedido(self):
         if self.pedidoActual:
-            total = self.pedidoActual.calcularTotal()
-            print(f"Total a pagar: ${total} MXN")
+            print("\n--- Detalles del Pedido ---")
+            total = 0
+            for itemId, cantidad in self.pedidoActual.items:
+                consulta = "SELECT nombre, precio FROM menu WHERE id = %s"
+                cursor.execute(consulta, (itemId,))
+                resultado = cursor.fetchone()
+                if resultado:
+                    nombre, precio = resultado
+                    subtotal = precio * cantidad
+                    print(f"{nombre} - Cantidad: {cantidad} - Precio unitario: ${precio:.2f} MXN - Subtotal: ${subtotal:.2f} MXN")
+                    total += subtotal
+            print(f"Total a pagar: ${total:.2f} MXN")
             return total
         else:
             print("No hay pedidos registrados.")
@@ -207,7 +218,6 @@ class Restaurante:
             mesa = Mesa(numero, capacidad)
             mesa.estado = estado
             self.mesas.append(mesa)
-        print("Mesas cargadas desde la base de datos.")
 
     def añadirMesa(self, numero, capacidad):
         consulta = "SELECT numero FROM mesas WHERE numero = %s"
@@ -241,9 +251,6 @@ class Restaurante:
         cursor.execute(consulta)
         for numero, capacidad in cursor.fetchall():
             print(f"Mesa {numero} (Capacidad: {capacidad}) está disponible")
-        #for mesa in self.mesas:
-        #    if mesa.verificarEstado() == 'libre':
-        #        print(f"Mesa {mesa.numero} (Capacidad: {mesa.capacidad}) esta disponible.")
 
     def hacerReservacion (self, cliente, numeroMesa):
         consulta = "SELECT estado FROM mesas WHERE numero = %s"
@@ -323,7 +330,7 @@ class MenuCliente:
             print("\nMenú Comensal")
             print("1. Ver Menú")
             print("2. Escoger Items del Menú")
-            print("3. Ver Cuenta")
+            print("3. Ver Pedido")
             print("4. Salir")
             opcion = input("Seleccione una opción: ")
 
@@ -332,7 +339,7 @@ class MenuCliente:
             elif opcion == "2":
                 self.restaurante.escogerItemsMenu(self.cliente)
             elif opcion == "3":
-                self.restaurante.mostrarCuenta(self.cliente)
+                self.cliente.verPedido()
             elif opcion == "4":
                 if self.cliente.mesaAsignada:
                     if self.cliente.mesaAsignada.liberar():
@@ -351,7 +358,20 @@ class MenuCliente:
 class MenuAdministrador:
     def __init__(self,restaurante):
         self.restaurante = restaurante
+
+    def autenticar(self):
+        usuario = input("Ingrese el nombre del usuario: ")
+        contraseña = getpass("Ingrese la contraseña: ")
+        if usuario == "admin" and contraseña == "password":
+            return True
+        else:
+            print("Acceso denegado")
+            return False
+        
     def mostrarMenu(self):
+        if not self.autenticar():
+            return
+        
         while True:
             print("\nMenú Administrador")
             print("1. Añadir Mesa")
@@ -436,21 +456,3 @@ class Main:
 if __name__ == "__main__":
     principal = Main()
     principal.mostrarMenuPrincipal()
-
-#restaurante = Restaurante()
-#restaurante.añadirMesa(1,4)
-#restaurante.añadirMesa(2,2)
-#restaurante.menu.agregarItem('Tacos','Tacos de pastor con todo',10.0)
-#restaurante.menu.agregarItem('Torta','Torta de pastor con todo',50.0)
-#restaurante.mostrarMesasDisponibles()
-
-#cliente = Cliente('Adrián Rodríguez')
-#cliente2 = Cliente("Pablo Molina")
-
-#restaurante.hacerReservacion(cliente,1)
-#restaurante.mostrarMesasDisponibles()
-
-#restaurante.hacerReservacion(cliente2,2)
-
-#restaurante.escogerItemsMenu(cliente)
-#restaurante.mostrarCuenta(cliente)
