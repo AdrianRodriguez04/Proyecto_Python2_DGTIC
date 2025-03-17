@@ -53,22 +53,53 @@ class Mesa:
         return self.estado
     
 class Pedido:
-    def __init__(self):
+    def __init__(self, clienteId):
+        self.clienteId = clienteId
         self.items = []
         self.estado = 'preparando'
+        self.id = None
 
-    def agregarItem(self, item):
-        self.items.append(item)
+    def agregarItem(self, itemId, cantidad = 1):
+        self.items.append((itemId, cantidad))
 
-    def eliminarItem(self, item):
-        if item in self.items:
-            self.items.remove(item)
+    def guardarPedido(self):
+        consulta = "INSERT INTO pedidos (clienteId, estado) VALUES (%s,%s)"
+        cursor.execute(consulta,(self.clienteId, self.estado))
+        conexion.commit
+
+        self.id = cursor.lastrowid
+
+        for itemId, cantidad in self.items:
+            consulta = "INSERT INTO detallePedidos (pedidoId, itemId, cantidad) VALUES (%s,%s,%s)"
+            cursor.execute(consulta, (self.id, itemId, cantidad))
+            conexion.commit()
+
+        print(f"Pedido {self.id} guardado correctamente.")
+
+    def eliminarItem(self, itemId):
+        self.items = [(i, q) for (i, q) in self.items if 1 != itemId]
+        print(f"Item {itemId} eliminado del pedido.")
 
     def calcularTotal(self):
-        return sum(item.precio for item in self.items)
+        total = 0
+        for itemId, cantidad in self.items:
+            consulta = "SELECT precio FROM menu WHERE id = %s"
+            cursor.execute(consulta, (itemId,))
+            resultado = cursor.fetchone()
+            if resultado:
+                precio = resultado[0]
+                total += precio * cantidad
+        return total
     
     def cambiarEstado(self, nuevoEstado):
-        self.estado = nuevoEstado
+        if self.id:
+            consulta = "UPDATE pedido SET estado = %s WHERE id = %s"
+            cursor.execute(consulta, (nuevoEstado, self.id))
+            conexion.commit()
+            self.estado = nuevoEstado
+            print(f"EStado del pedido {self.id} actualizado a '{nuevoEstado}'")
+        else:
+            print("Error: EL pedido no ha sido guardado en la base de datos")
 
 class Menu:
     def __init__(self):
@@ -76,24 +107,24 @@ class Menu:
         self.cargarBD()
 
     def cargarBD(self):
-        consulta = "SELECT nombre, descripcion, precio FROM menu"
+        consulta = "SELECT id, nombre, descripcion, precio FROM menu"
         cursor.execute(consulta)
-        for nombre, descripcion, precio in cursor.fetchall():
-            self.items.append(ItemMenu(nombre, descripcion, precio))
+        for id, nombre, descripcion, precio in cursor.fetchall():
+            self.items.append(ItemMenu(id, nombre, descripcion, precio))
 
     def agregarItem(self, nombre, descripcion, precio):
-        self.items.append(ItemMenu(nombre, descripcion, precio))
-
         consulta = "INSERT INTO menu (nombre, descripcion, precio) VALUES (%s,%s,%s)"
         cursor.execute(consulta,(nombre,descripcion,precio))
         conexion.commit()
+        self.items.append(ItemMenu(cursor.lastrowid, nombre, descripcion, precio))
+        print(f"Item '{nombre}' añadido al menu")
 
     def eliminarItem(self, nombre):
-        self.items = [item for item in self.items if item.nombre != nombre]
-
         consulta = "DELETE FROM menu WHERE nombre = %s"
         cursor.execute(consulta, (nombre,))
         conexion.commit()
+        self.items = [item for item in self.items if item.nombre != nombre]
+        print(f"Item '{nombre}' eliminado del menú")
 
     def mostrarMenu(self):
         if not self.items:
@@ -105,7 +136,8 @@ class Menu:
             print(f"{i}. {item.nombre} - ${item.precio}")
 
 class ItemMenu:
-    def __init__(self, nombre, descripcion, precio):
+    def __init__(self, id, nombre, descripcion, precio):
+        self.id = id
         self.nombre = nombre
         self.descripcion = descripcion
         self.precio = precio
@@ -114,20 +146,22 @@ class Cliente:
     def __init__(self, nombre):
         self.nombre = nombre
         self.mesaAsignada = None
-        self.pedidoActual = Pedido()
+        self.pedidoActual = None
+        self.id = None
 
-        consulta = "SELECT nombre FROM clientes WHERE nombre = %s"
+        consulta = "SELECT id FROM clientes WHERE nombre = %s"
         cursor.execute(consulta, (self.nombre,))
         resultado = cursor.fetchone()
 
         if resultado:
-            print(f"Error: El cliente {self.nombre} ya existe.")
-            return
-        
-        consulta = "INSERT INTO clientes (nombre) VALUES (%s)"
-        cursor.execute(consulta, (self.nombre,))
-        conexion.commit()
-        print(f"Cliente {self.nombre} registrado correctamente")
+            print(f"El cliente {self.nombre} ya existe.")
+            self.id = resultado[0]
+        else:
+            consulta = "INSERT INTO clientes (nombre) VALUES (%s)"
+            cursor.execute(consulta, (self.nombre,))
+            conexion.commit()
+            self.id = cursor.lastrowid
+            print(f"Cliente {self.nombre} registrado correctamente")
 
     def asignarMesa(self, mesa):
         self.mesaAsignada = mesa
@@ -136,13 +170,19 @@ class Cliente:
         conexion.commit()
 
     def realizarPedido (self, items):
-        for item in items:
-            self.pedidoActual.agregarItem(item)
+        self.pedidoActual = Pedido(self.id)
+        for itemId, cantidad in items:
+            self.pedidoActual.agregarItem(itemId,cantidad)
+        self.pedidoActual.guardarPedido()
 
     def verCuenta(self):
-        total = self.pedidoActual.calcularTotal()
-        print(f"Total a pagar: ${total}")
-        return total
+        if self.pedidoActual:
+            total = self.pedidoActual.calcularTotal()
+            print(f"Total a pagar: ${total} MXN")
+            return total
+        else:
+            print("No hay pedidos registrados.")
+            return 0
     
 class Restaurante:
     def __init__(self):
@@ -244,9 +284,10 @@ class Restaurante:
                     indice = int(opcion) - 1
 
                     if 0 <= indice < len(self.menu.items):
-                        itemsSeleccionado = self.menu.items[indice]
-                        itemsSeleccionados.append(itemsSeleccionado)
-                        print(f"Item '{itemsSeleccionado.nombre}' añadido al pedido.")
+                        item = self.menu.items[indice]
+                        cantidad = int(input(f"Ingrese la cantidad de '{item.nombre}' que desea"))
+                        itemsSeleccionados.append((item.id, cantidad))
+                        print (f"Item '{item.nombre}' añadido al pedido")
                     else:
                         print("Número inválido.")
                 except ValueError:
