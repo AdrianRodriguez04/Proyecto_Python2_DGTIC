@@ -123,7 +123,7 @@ class Menu:
             self.items.append(ItemMenu(id, nombre, descripcion, precio))
 
     def agregarItem(self, nombre, descripcion, precio): # Agrega un item al menu
-        consulta = "INSERT INTO menu (nombre, descripcion, precio) VALUES (%s,%s,%s,1)"
+        consulta = "INSERT INTO menu (nombre, descripcion, precio) VALUES (%s,%s,%s)"
         cursor.execute(consulta,(nombre,descripcion,precio))
         conexion.commit()
         self.items.append(ItemMenu(cursor.lastrowid, nombre, descripcion, precio))
