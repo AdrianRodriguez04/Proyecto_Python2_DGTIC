@@ -28,11 +28,11 @@ datos en MySQL para que toda la información se guarde en dicha BD.
     - *chmod +x installPython.sh*
     - *chmod +x setupBD.sh*
 3. Ejecutaremos el script **installPython.sh** de la siguiente manera:
-    - *sudo ./installPython.sh*
+    - *./installPython.sh*
 4. Seguido a esto es necesario instalar las dependecias del proyecto usando pip de la siguiente manera:
     - *pip install -r requirements.txt*
 5. Ejecutamos el segundo script **setupBD.sh** de la siguiente manera (NOTA: Es importante saber que durante la ejecución del script se solicitará una contraseña para MySQL la cual es vital guardar muy bien puesto que servirá para futuras conexiones):
-    - *sudo ./setupBD.sh*
+    - *./setupBD.sh*
 6. Por último, teniendo las configuraciones anteriores, ahora sí podemos ejecutar el programa con el siguiente comando:
     - *python3 proyecto.py*
 
