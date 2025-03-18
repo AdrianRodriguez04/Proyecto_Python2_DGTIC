@@ -1,7 +1,5 @@
--------------------------------------------
 CREATE DATABASE proyecto;
 
--------------------------------------------
 USE proyecto;
 
 CREATE TABLE mesas (
@@ -41,7 +39,3 @@ CREATE TABLE detallePedidos (
     FOREIGN KEY (pedidoId) REFERENCES pedidos(id),
     FOREIGN KEY (itemId) REFERENCES menu(id)
 );
-
-SHOW tables;
-
-EXIT;
