@@ -1,22 +1,26 @@
-import mysql.connector
-from getpass import getpass
+import mysql.connector # Se usa para conectarse a MySQL
+from getpass import getpass # Oculta la entrada de constraseñas
 
+# Conexión a la base de datos del proyecto
 conexion = mysql.connector.connect(
     host='localhost',
     user='root',
-    password='Cortana33',
+    password='Cortana33', # La contraseña se genera a partir del script "setupDB.sh"
     database='proyecto'
 )
 
 cursor = conexion.cursor()
 
+    # Clase Mesa
+# Esta clase se encarga de gestionar el estado de las mesas(ya sea libre u ocupada) y 
+# realiza operaciones como reservar y liberar mesas
 class Mesa:
     def __init__(self, numero, capacidad):
         self.numero = numero
         self.capacidad = capacidad
         self.estado = self.cargarEstadoBD()
 
-    def cargarEstadoBD(self):
+    def cargarEstadoBD(self): # Consulta el estado de la mesa en nuestra BD
         consulta = "SELECT estado FROM mesas WHERE numero = %s"
         cursor.execute(consulta, (self.numero,))
         resultado = cursor.fetchone()
@@ -26,7 +30,7 @@ class Mesa:
             print(f"Error: La mesa {self.numero} no existe en la base de datos")
             return 'libre'
 
-    def reservar(self):
+    def reservar(self): # Reserva la mesa si esta libre
         if self.estado == 'libre':
             self.estado = 'ocupada'
             consulta = "UPDATE mesas SET estado = 'ocupada' WHERE numero = %s"
@@ -35,7 +39,7 @@ class Mesa:
             return True
         return False
     
-    def liberar(self):
+    def liberar(self): # Libera la mesa si esta ocupada
         if self.estado == 'ocupada':
             self.estado = 'libre'
             consulta = "UPDATE mesas SET estado = 'libre' WHERE numero = %s"
@@ -45,7 +49,7 @@ class Mesa:
             return True
         return False
     
-    def verificarEstado (self):
+    def verificarEstado (self): # Verifica el estado actual de la mesa desde la BD
         consulta = "SELECT estado FROM mesas WHERE numero = %s"
         cursor.execute(consulta, (self.numero,))
         estadoBD = cursor.fetchone()
@@ -53,6 +57,9 @@ class Mesa:
             self.estado = estadoBD[0]
         return self.estado
     
+    # Clase Pedido
+# Esta clase gestiona los pedidos de los clientes, inluyendo la adición de items, 
+# calcular el total y el cambio de estado
 class Pedido:
     def __init__(self, clienteId):
         self.clienteId = clienteId
@@ -60,10 +67,10 @@ class Pedido:
         self.estado = 'preparando'
         self.id = None
 
-    def agregarItem(self, itemId, cantidad = 1):
+    def agregarItem(self, itemId, cantidad = 1): # Agrega un solo item al pedido
         self.items.append((itemId, cantidad))
 
-    def guardarPedido(self):
+    def guardarPedido(self): # Guarda el pedido en la BD
         consulta = "INSERT INTO pedidos (clienteId, estado) VALUES (%s,%s)"
         cursor.execute(consulta,(self.clienteId, self.estado))
         conexion.commit
@@ -77,11 +84,11 @@ class Pedido:
 
         print(f"Pedido {self.id} guardado correctamente.")
 
-    def eliminarItem(self, itemId):
+    def eliminarItem(self, itemId): # Elimina un item del pedido
         self.items = [(i, q) for (i, q) in self.items if 1 != itemId]
         print(f"Item {itemId} eliminado del pedido.")
 
-    def calcularTotal(self):
+    def calcularTotal(self): # Calcula el total a pagar por el pedido 
         total = 0
         for itemId, cantidad in self.items:
             consulta = "SELECT precio FROM menu WHERE id = %s"
@@ -92,7 +99,7 @@ class Pedido:
                 total += precio * cantidad
         return total
     
-    def cambiarEstado(self, nuevoEstado):
+    def cambiarEstado(self, nuevoEstado): # Cambia el estado del pedido
         if self.id:
             consulta = "UPDATE pedido SET estado = %s WHERE id = %s"
             cursor.execute(consulta, (nuevoEstado, self.id))
@@ -102,25 +109,27 @@ class Pedido:
         else:
             print("Error: EL pedido no ha sido guardado en la base de datos")
 
+    #Clase Menu
+# Esta clase gestiona los items del menu, permitiendo agregar, eliminar y mostrar items
 class Menu:
     def __init__(self):
         self.items = []
         self.cargarBD()
 
-    def cargarBD(self):
+    def cargarBD(self): # Carga los items del menu desde la BD
         consulta = "SELECT id, nombre, descripcion, precio FROM menu WHERE activo = 1"
         cursor.execute(consulta)
         for id, nombre, descripcion, precio in cursor.fetchall():
             self.items.append(ItemMenu(id, nombre, descripcion, precio))
 
-    def agregarItem(self, nombre, descripcion, precio):
+    def agregarItem(self, nombre, descripcion, precio): # Agrega un item al menu
         consulta = "INSERT INTO menu (nombre, descripcion, precio) VALUES (%s,%s,%s,1)"
         cursor.execute(consulta,(nombre,descripcion,precio))
         conexion.commit()
         self.items.append(ItemMenu(cursor.lastrowid, nombre, descripcion, precio))
         print(f"Item '{nombre}' añadido al menu")
 
-    def eliminarItem(self, nombre):
+    def eliminarItem(self, nombre): # Desactiva un item del menu
         consulta = "SELECT id FROM menu WHERE nombre = %s"
         cursor.execute(consulta, (nombre,))
         resultado = cursor.fetchone()
@@ -136,7 +145,7 @@ class Menu:
         else:
             print(f"Error: El item '{nombre}' no existe en el menú.")
 
-    def mostrarMenu(self):
+    def mostrarMenu(self): # MUestra el menu
         if not self.items:
             print("El menú está vació")
             return
@@ -145,6 +154,9 @@ class Menu:
         for i, item in enumerate(self.items, start=1):
             print(f"{i}. {item.nombre} - ${item.precio}")
 
+    # Clase Item Menu
+# Esta clase representa un item del menu. Almacena información cmo el ID, el nombre, 
+# la descripción y el precio de cada item, se usa para gestionar los items del menu
 class ItemMenu:
     def __init__(self, id, nombre, descripcion, precio):
         self.id = id
@@ -152,6 +164,9 @@ class ItemMenu:
         self.descripcion = descripcion
         self.precio = precio
 
+    # Clase Cliente:
+# Aqui se gestiona la información del cliente, incluyendo la asignación de mesas 
+# y la realizacion de pedidos
 class Cliente:
     def __init__(self, nombre):
         self.nombre = nombre
@@ -173,19 +188,19 @@ class Cliente:
             self.id = cursor.lastrowid
             print(f"Cliente {self.nombre} registrado correctamente")
 
-    def asignarMesa(self, mesa):
+    def asignarMesa(self, mesa): # Asigna una mesa al cliente
         self.mesaAsignada = mesa
         consulta = "UPDATE clientes SET mesaAsignada = %s WHERE nombre = %s"
         cursor.execute(consulta, (mesa.numero, self.nombre))
         conexion.commit()
 
-    def realizarPedido (self, items):
+    def realizarPedido (self, items): # Realiza un pedido para el cliente
         self.pedidoActual = Pedido(self.id)
         for itemId, cantidad in items:
             self.pedidoActual.agregarItem(itemId,cantidad)
         self.pedidoActual.guardarPedido()
 
-    def verPedido(self):
+    def verPedido(self): # Muestra los detalles del pedido actual
         if self.pedidoActual:
             print("\n--- Detalles del Pedido ---")
             total = 0
@@ -203,7 +218,10 @@ class Cliente:
         else:
             print("No hay pedidos registrados.")
             return 0
-    
+
+    # Clase Restaurante 
+# En esta clase se gestiona las operaciones de restaurante, incluyendo la 
+# gestión de mesas, clientes y pedidos
 class Restaurante:
     def __init__(self):
         self.mesas = []
@@ -211,7 +229,7 @@ class Restaurante:
         self.clientes = []
         self.cargarBD()
 
-    def cargarBD(self):
+    def cargarBD(self): # Carga la mesa desde la BD
         consulta = "SELECT numero, capacidad, estado FROM mesas"
         cursor.execute(consulta)
         for numero, capacidad, estado in cursor.fetchall():
@@ -219,7 +237,7 @@ class Restaurante:
             mesa.estado = estado
             self.mesas.append(mesa)
 
-    def añadirMesa(self, numero, capacidad):
+    def añadirMesa(self, numero, capacidad): # Agrega una nueva mesa al restaurante
         consulta = "SELECT numero FROM mesas WHERE numero = %s"
         cursor.execute(consulta, (numero,))
         resultado = cursor.fetchone()
@@ -237,7 +255,7 @@ class Restaurante:
         print(f"Mesa {numero} añadida correctamente")
         return True
     
-    def eliminarMesa(self, numero):
+    def eliminarMesa(self, numero): # Elimina una mesa del restaurante
         consulta = "DELETE FROM mesas WHERE numero = %s"
         cursor.execute(consulta, (numero,))
         conexion.commit()
@@ -246,13 +264,13 @@ class Restaurante:
         print (f"Mesa {numero} eliminada correctamente")
         return True
     
-    def mostrarMesasDisponibles(self):
+    def mostrarMesasDisponibles(self): # MUestra las mesas disponibles
         consulta = "SELECT numero, capacidad FROM mesas WHERE estado = 'libre'"
         cursor.execute(consulta)
         for numero, capacidad in cursor.fetchall():
             print(f"Mesa {numero} (Capacidad: {capacidad}) está disponible")
 
-    def hacerReservacion (self, cliente, numeroMesa):
+    def hacerReservacion (self, cliente, numeroMesa): # Realiza una reservación para un cliente
         consulta = "SELECT estado FROM mesas WHERE numero = %s"
         cursor.execute(consulta, (numeroMesa,))
         resultado = cursor.fetchone()
@@ -277,17 +295,17 @@ class Restaurante:
             print(f"Mesa {numeroMesa} no disponible")
             return False
     
-    def gestionarPedido(self, cliente, items):
+    def gestionarPedido(self, cliente, items): # Gestiona un pedido para un cliente
         if cliente in self.clientes:
             cliente.realizarPedido(items)
             print(f"Pedido realizado para {cliente.nombre}.")
         else:
             print("Cliente no registrado.")
 
-    def mostrarMenu(self):
+    def mostrarMenu(self): # Muestra el menú al cliente 
         self.menu.mostrarMenu()
 
-    def escogerItemsMenu(self,cliente):
+    def escogerItemsMenu(self,cliente): # Perminte al cliente escoger items del menu
         if cliente in self.clientes:
             self.mostrarMenu()
             itemsSeleccionados = []
@@ -314,18 +332,21 @@ class Restaurante:
         else:
             print("Cliente no registrado")
 
-    def mostrarCuenta(self, cliente):
+    def mostrarCuenta(self, cliente): # Muestra la cuenta del cliente 
         if cliente in self.clientes:
             cliente.verCuenta()
         else:
             print("Cliente no registrado")
 
+    # Clase MenuCliente
+# Se gestiona las interacciones del cliente con el sistema, como ver el 
+# menú, realizar pedidos y ver su cuenta
 class MenuCliente:
     def __init__(self, restaurante, cliente):
         self.restaurante = restaurante
         self.cliente = cliente
 
-    def mostrarMenu(self):
+    def mostrarMenu(self): # Muestra una interfaz para el cliente
         while True:
             print("\nMenú Comensal")
             print("1. Ver Menú")
@@ -355,11 +376,14 @@ class MenuCliente:
             else:
                 print("Opción inválida :( Intente de nuevo.")
 
+    # Clase Menu Administrador
+# Aqui se gestiona las operaciones administrativas, como agregar o eliminar 
+# mesas, gestionar el menú y ver clientes
 class MenuAdministrador:
     def __init__(self,restaurante):
         self.restaurante = restaurante
 
-    def autenticar(self):
+    def autenticar(self): # Autentica al administrador con usuario y contraseña
         usuario = input("Ingrese el nombre del usuario: ")
         contraseña = getpass("Ingrese la contraseña: ")
         if usuario == "admin" and contraseña == "password":
@@ -368,7 +392,7 @@ class MenuAdministrador:
             print("Acceso denegado")
             return False
         
-    def mostrarMenu(self):
+    def mostrarMenu(self): # Muestra la interfaz del administrador
         if not self.autenticar():
             return
         
@@ -414,11 +438,15 @@ class MenuAdministrador:
             else:
                 print("Opción inválida. Intentalo de nuevo.")
 
+    # Clase Principal
+# Es el punto de entrada del programa, se gestiona el menú principal y 
+# redirige al usuario al menú del cliente o al menú del administrador 
+# según su elección
 class Main:
     def __init__(self):
         self.restaurante = Restaurante()
     
-    def mostrarMenuPrincipal(self):
+    def mostrarMenuPrincipal(self): # Muestra la interfaz principal
         while True:
             print("\nMenú Principal")
             print("1. Menú Cliente")
@@ -453,6 +481,8 @@ class Main:
             else:
                 print("Opción invalida.")
 
+    # Bloque principal del programa
+# Crea una instancia de la clase principal y ejecuta la interfaz principal
 if __name__ == "__main__":
     principal = Main()
     principal.mostrarMenuPrincipal()
